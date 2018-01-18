@@ -1,0 +1,7 @@
+pylint
+autopep8
+virtualenv
+speechrecognition
+pyaudio
+nose
+numpy

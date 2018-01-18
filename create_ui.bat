@@ -1,0 +1,1 @@
+c:\Python35-32\Lib\site-packages\PyQt5>pyuic5.bat c:\Users\vnaraujo\projects\speechRecognition\main_ui.ui -o c:\Users\vnaraujo\projects\speechRecognition\main_ui.py
