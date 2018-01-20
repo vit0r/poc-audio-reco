@@ -24,9 +24,6 @@ __author__ = 'Vitor Nascimento de Araujo'
 class Main(Ui_MainWindow, QThread):
     """Main calss App"""
 
-    CHANNNELS = 1
-    RATE = 16000
-
     def __init__(self, dialog):
         """Init CLASS"""
 
@@ -46,6 +43,9 @@ class Main(Ui_MainWindow, QThread):
 
         # parse args
         self.args = self.args_parser()
+
+        # get values from default input device
+        self.input_device = self.py_audio.get_default_input_device_info()
 
     @classmethod
     def args_parser(cls):
@@ -79,7 +79,7 @@ class Main(Ui_MainWindow, QThread):
         """to string byte audio from numpy array and create data audio"""
         frame_data = self.data.tostring()
         audio_data = speech_rec.AudioData(
-            frame_data=frame_data, sample_rate=self.RATE, sample_width=pyaudio.paInt24)
+            frame_data=frame_data, sample_rate=self.input_device['maxInputChannels'], sample_width=pyaudio.paInt24)
         return audio_data
 
     def send_to_speech(self):
@@ -107,10 +107,11 @@ class Main(Ui_MainWindow, QThread):
     def run(self):
         """Main thread => run all app"""
         stream = self.py_audio.open(format=pyaudio.paInt32,
-                                    channels=Main.CHANNNELS,
-                                    rate=Main.RATE,
+                                    channels=self.input_device['maxInputChannels'],
+                                    rate=int(self.input_device['defaultSampleRate']),
                                     output=False,
                                     input=True,
+                                    input_device_index=self.input_device['index'],
                                     stream_callback=self.callback)
         stream.start_stream()
         while stream.is_active():
