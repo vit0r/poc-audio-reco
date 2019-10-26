@@ -5,3 +5,4 @@ speechrecognition
 pyaudio
 nose
 numpy
+pyqt5
