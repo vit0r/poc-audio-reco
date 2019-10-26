@@ -24,6 +24,8 @@ __author__ = 'Vitor Nascimento de Araujo'
 class Main(Ui_MainWindow, QThread):
     """Main calss App"""
 
+    _CHANNELS = 1
+
     def __init__(self, dialog):
         """Init CLASS"""
 
@@ -54,12 +56,10 @@ class Main(Ui_MainWindow, QThread):
             prog='POC', description='POC rec sound')
         parser.add_argument('--lang', default='pt_BR',
                             required=False, type=str, help='--lang pt_BR')
-        parser.add_argument('--silence', default=15,
-                            required=False, type=int, help='--silence 15')
+        parser.add_argument('--silence', default=30,
+                            required=False, type=int, help='--silence 30')
         parser.add_argument('--log', default=False,
-                            required=False, type=bool, help='--log True')
-        parser.add_argument('--noise', default=20,
-                            required=False, type=int, help='--noise 20')
+                            required=True, type=bool, help='--log True')
         parser.add_argument('--apikey', default=None,
                             required=False, type=str, help='key-google-speech')
         return parser.parse_args()
@@ -68,25 +68,25 @@ class Main(Ui_MainWindow, QThread):
         """Receive data from audio device"""
 
         self.rms = audioop.rms(in_data, 1)
-        if self.rms > self.args.noise:
-            self.data = np.append(self.data, np.fromstring(in_data, dtype=np.float))
-            if self.args.log:
-                info = u'{}\n{}\n{}\n{}\n\n'.format(self.rms, frame_count, time_info, flag)
-                self.labelLogger.setText(info)
+        self.data = np.append(self.data, np.fromstring(in_data, dtype=np.float))
+        if self.args.log:
+            info = u'{}\n{}\n{}\n{}\n\n'.format(self.rms, frame_count, time_info, flag)
+            self.labelLogger.setText(info)
         return in_data, pyaudio.paContinue
 
     def build_audio_data(self):
         """to string byte audio from numpy array and create data audio"""
         frame_data = self.data.tostring()
         audio_data = speech_rec.AudioData(
-            frame_data=frame_data, sample_rate=self.input_device['maxInputChannels'], sample_width=pyaudio.paInt24)
+            frame_data=frame_data, sample_rate=int(self.input_device['defaultSampleRate']),
+            sample_width=pyaudio.paInt24)
         return audio_data
 
     def send_to_speech(self):
         """Send audio data from speech api"""
         text = ''
+        audio_data = self.build_audio_data()
         try:
-            audio_data = self.build_audio_data()
             text = self.speech_rec.recognize_google(
                 audio_data, key=self.args.apikey, language=self.args.lang, show_all=False)
         except speech_rec.UnknownValueError as err:
@@ -107,18 +107,16 @@ class Main(Ui_MainWindow, QThread):
     def run(self):
         """Main thread => run all app"""
         stream = self.py_audio.open(format=pyaudio.paInt32,
-                                    channels=self.input_device['maxInputChannels'],
+                                    channels=self._CHANNELS,
                                     rate=int(self.input_device['defaultSampleRate']),
                                     output=False,
                                     input=True,
-                                    input_device_index=self.input_device['index'],
                                     stream_callback=self.callback)
         stream.start_stream()
         while stream.is_active():
-            noise = self.args.noise >= self.rms
-            silence = self.rms <= self.args.silence
-            if silence and noise and self.data.size > 0:
+            if self.rms < self.args.silence:
                 self.send_to_speech()
+
 
 
 if __name__ == '__main__':
