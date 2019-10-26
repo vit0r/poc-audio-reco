@@ -3,3 +3,6 @@
 *.egg*
 *.wav
 env
+venv*
+.venv*
+.env*
